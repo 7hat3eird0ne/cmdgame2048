@@ -158,7 +158,7 @@ class Game2048:
         else:
             move_found: bool = False
             for i in range(4):
-                if self._move(i, True) != 1:
+                if self._move(i, True) != -1:
                     move_found = True
                     break
             if not move_found:
@@ -191,7 +191,6 @@ class Game2048:
         self.game_state: GameState = 0
         self._spawn()
         self._spawn()
-
 
 
 def restart():
@@ -245,6 +244,6 @@ def main():
         })
         listener.start()
         move()
-        input("Pressing enter will end the game")
+        input("Pressing enter will end the game, press any key to remove this text")
 
 main()
