@@ -72,7 +72,7 @@ class Game2048:
         new_spot: int = (empty_spots * random.random()).__floor__()
         i: int = 0
         chosen_level: int
-        if random.random() > 0.5:
+        if random.random() > 0.9:
             chosen_level = 2
         else:
             chosen_level = 1
