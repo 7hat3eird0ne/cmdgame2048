@@ -197,6 +197,7 @@ class Game2048:
 def restart():
     global game
     game = Game2048()
+    move()
 
 
 def move():
