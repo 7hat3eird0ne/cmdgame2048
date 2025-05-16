@@ -1,10 +1,5 @@
 import random
-try:
-    from pynput import keyboard
-except:
-    import pip
-    pip.main("install", "pynput")
-    from pynput import keyboard
+from pynput import keyboard
 import os
 import typing
 
@@ -25,11 +20,6 @@ def get_max_number_from_grid(grid: Grid)-> int:
 
 class Game2048:
     def __str__(self)-> str:
-        max_number: int = get_max_number_from_grid(self.grid)
-        while max_number >= len(self.tiles):
-            self.tiles.append(str(2*int(self.tiles[-1])))
-        max_character_length: int = len(self.tiles[max_number])
-
         additional_info: str = ""
         if self.game_state == -1:
             additional_info = " (LOST)"
@@ -185,7 +175,7 @@ class Game2048:
 
     def __init__(self):
         self.grid: Grid = [[0]*4]*4
-        self.tiles: typing.List[str] = ["", "2"]
+        self.tiles: typing.List[str] = ["", "2", "4"]
         self.score: int = 0
         self.moves: int = 0
         self.game_state: GameState = 0
@@ -244,6 +234,7 @@ def main():
         })
         listener.start()
         move()
-        input("Pressing enter will end the game, press any key to remove this text")
+        print("Pressing enter will end the game, press any key to remove this text", end = "")
+        input("")
 
 main()
