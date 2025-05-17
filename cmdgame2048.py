@@ -10,14 +10,6 @@ MoveOutput = typing.Literal[-1, 0, 1, 2]
 Grid = typing.List[typing.List[int]]
 GameState = typing.Literal[-1, 0, 1]
 
-def get_max_number_from_grid(grid: Grid)-> int:
-    current_max: int = 0
-    for row in grid:
-        for tile in row:
-            if tile > current_max:
-                current_max = tile
-    return current_max
-
 class Game2048:
     def __str__(self)-> str:
         additional_info: str = ""
@@ -142,7 +134,11 @@ class Game2048:
 
     def _check(self, check_argument: MoveOutput)-> GameState:
         if check_argument != -1:
-            max_number: int = get_max_number_from_grid(self.grid)
+            max_number: int = 0
+            for row in self.grid:
+                for tile in row:
+                    if tile > current_max:
+                        current_max = tile
             if max_number == 11:
                 self.game_state = 1
         else:
@@ -161,19 +157,7 @@ class Game2048:
         self._check(self._move(direction))
         return True
 
-    def up(self):
-        self.public_move(1)
-
-    def down(self):
-        self.public_move(3)
-
-    def left(self):
-        self.public_move(0)
-
-    def right(self):
-        self.public_move(2)
-
-    def __init__(self):
+    def restart(self):
         self.grid: Grid = [[0]*4]*4
         self.tiles: typing.List[str] = ["", "2", "4"]
         self.score: int = 0
@@ -182,58 +166,39 @@ class Game2048:
         self._spawn()
         self._spawn()
 
-
-def restart():
-    global game
-    game = Game2048()
-    move()
+    def __init__(self):
+        self.restart()
 
 
-def move():
-    global game
+def restart(game_object: Game2048):
+    game_object.restart()
     clean()
-    print(str(game))
+    print(str(game_object))
 
 
-def up():
-    global game
-    game.up()
-    move()
-
-def down():
-    global game
-    game.down()
-    move()
-
-def left():
-    global game
-    game.left()
-    move()
-
-def right():
-    global game
-    game.right()
-    move()
+def move(game_object: Game2048, direction: int):
+    game_object.public_move(direction)
+    clean()
+    print(str(game_object))
 
 
 def main():
     if input("By pressing enter, you agree that the terminal will be cleared and that the game of 2048 will start. Controls are WASD or arrow keys, ENTER to quit and R to restart. Press any key and enter to avoid starting the game: ") == "":
-        global game
-        restart()
+        game = Game2048()
+        restart(game)
         listener = keyboard.GlobalHotKeys({
-            "w": up,
-            "s": down,
-            "a": left,
-            "d": right,
-            "<up>": up,
-            "<down>": down,
-            "<left>": left,
-            "<right>": right,
-            "r": restart
+            "w": (lambda: move(game, 1))(),
+            "s": (lambda: move(game, 3))(),
+            "a": (lambda: move(game, 0))(),
+            "d": (lambda: move(game, 2))(),
+            "<up>": (lambda: move(game, 1))(),
+            "<down>": (lambda: move(game, 3))(),
+            "<left>": (lambda: move(game, 0))(),
+            "<right>": (lambda: move(game, 2))(),
+            "r": (lambda: restart(game))()
             
         })
         listener.start()
-        move()
         print("Pressing enter will end the game, press any key to remove this text", end = "")
         input("")
 
