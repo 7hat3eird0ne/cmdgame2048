@@ -187,15 +187,15 @@ def main():
         game = Game2048()
         restart(game)
         listener = keyboard.GlobalHotKeys({
-            "w": (lambda: move(game, 1))(),
-            "s": (lambda: move(game, 3))(),
-            "a": (lambda: move(game, 0))(),
-            "d": (lambda: move(game, 2))(),
-            "<up>": (lambda: move(game, 1))(),
-            "<down>": (lambda: move(game, 3))(),
-            "<left>": (lambda: move(game, 0))(),
-            "<right>": (lambda: move(game, 2))(),
-            "r": (lambda: restart(game))()
+            "w": (lambda: move(game, 1)),
+            "s": (lambda: move(game, 3)),
+            "a": (lambda: move(game, 0)),
+            "d": (lambda: move(game, 2)),
+            "<up>": (lambda: move(game, 1)),
+            "<down>": (lambda: move(game, 3)),
+            "<left>": (lambda: move(game, 0)),
+            "<right>": (lambda: move(game, 2)),
+            "r": (lambda: restart(game))
             
         })
         listener.start()
