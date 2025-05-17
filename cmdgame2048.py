@@ -8,15 +8,15 @@ clean = lambda : os.system("cls") if os.name == "nt" else os.system("clear")
 SpawnOutput = typing.Literal[-1, 1, 2]
 MoveOutput = typing.Literal[-1, 0, 1, 2]
 Grid = typing.List[typing.List[int]]
-GameState = typing.Literal[-1, 0, 1]
+GameState = typing.Literal[-3, -2, -1, 1, 2, 3]
 
 class Game2048:
     def __str__(self)-> str:
-        additional_info: str = ""
-        if self.game_state == -1:
-            additional_info = " (LOST)"
-        if self.game_state == 1:
-            additional_info = " (WON)"
+        additional_info = ""
+        if abs(self.game_state) == 2:
+            additional_info = " (GAME WON)"
+        elif abs(self.game_state) == 3:
+            additional_info = " (CUSTOM GRID USED)"
         result: str = f"Score: {self.score}, Moves: {self.moves}{additional_info}"
         max_character_lengths = []
         for i in zip(*self.grid):
@@ -29,17 +29,19 @@ class Game2048:
                 column_max_length = max_character_lengths[k]
                 tile_string: str = self.tiles[j]
                 padded_length: int = column_max_length - len(tile_string)
-                front_padding: int = padded_length//2
-                back_padding: int = front_padding + padded_length%2 + 1
+                front_padding: int = padded_length//2 + 1
+                back_padding: int = front_padding + padded_length%2
                 if k == len(i) - 1:
                     back_padding = 0
-                tile_string: str = tile_string + " "*back_padding
+                tile_string: str = " "*front_padding + tile_string + " "*back_padding
                 if first:
                     first = False
                 else:
-                    tile_string = "| " + " "*front_padding + tile_string
+                    tile_string = "|" + tile_string
                 result += tile_string
-        
+        if self.game_state < 0:
+            result += "\nGAME OVER"
+
         return result
 
     def _spawn(self)-> SpawnOutput:
@@ -148,7 +150,7 @@ class Game2048:
                     move_found = True
                     break
             if not move_found:
-                self.game_state = -1
+                self.game_state *= -1
         return self.game_state
 
     def public_move(self, direction: int)-> bool:
@@ -157,17 +159,22 @@ class Game2048:
         self._check(self._move(direction))
         return True
 
-    def restart(self):
-        self.grid: Grid = [[0]*4]*4
+    def restart(self, custom_grid: Grid|None = None):
+        if custom_grid is None:
+            self.grid: Grid = [[0]*4]*4
+            self.game_state: GameState = 1
+        else:
+            self.grid: Grid = custom_grid
+            self.game_state: GameState = 3
         self.tiles: typing.List[str] = ["", "2", "4"]
         self.score: int = 0
         self.moves: int = 0
-        self.game_state: GameState = 0
         self._spawn()
         self._spawn()
 
-    def __init__(self):
-        self.restart()
+    def __init__(self, custom_grid: Grid|None = None):
+        self.restart(custom_grid)
+        self.tiles.extend(["8", "16"])
 
 
 def restart(game_object: Game2048):
@@ -202,4 +209,7 @@ def main():
         print("Pressing enter will end the game, press any key to remove this text", end = "")
         input("")
 
-main()
+game = Game2048()
+
+
+print(Game2048([[4, 0, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0], [2, 0, 0, 1]]))
