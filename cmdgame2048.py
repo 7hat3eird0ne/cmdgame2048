@@ -174,7 +174,13 @@ class Game2048:
 
     def __init__(self, custom_grid: Grid|None = None):
         self.restart(custom_grid)
-        self.tiles.extend(["8", "16"])
+        max_number: int = 0
+        for row in self.grid:
+            for tile in row:
+                if tile > max_number:
+                    max_number = tile
+        while max_number >= len(self.tiles):
+            self.tiles.append(str(2*int(self.tiles[-1])))
 
 
 def restart(game_object: Game2048):
@@ -209,7 +215,4 @@ def main():
         print("Pressing enter will end the game, press any key to remove this text", end = "")
         input("")
 
-game = Game2048()
-
-
-print(Game2048([[4, 0, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0], [2, 0, 0, 1]]))
+main()
