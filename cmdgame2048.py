@@ -137,8 +137,8 @@ class Game2048:
             max_number: int = 0
             for row in self.grid:
                 for tile in row:
-                    if tile > current_max:
-                        current_max = tile
+                    if tile > max_number:
+                        max_number = tile
             if max_number == 11:
                 self.game_state = 1
         else:
