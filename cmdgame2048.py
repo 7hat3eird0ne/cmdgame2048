@@ -48,7 +48,8 @@ class Game2048:
                 else:
                     tile_string = "|" + tile_string
                 result += tile_string
-        result += f"\nUndos left: {self.undos_left}, swaps left: {self.swaps_left}, deletes left: {self.deletes_left}"
+        if self.powerups:
+            result += f"\nUndos left: {self.undos_left}, swaps left: {self.swaps_left}, deletes left: {self.deletes_left}"
         if self.game_state < 0:
             result += "\nGAME OVER"
 
@@ -257,7 +258,7 @@ class Game2048:
         else:
             self.powerup_mode = powerup_mode
         self.practice = bool(powerup_mode // 2)
-        self.powerups = bool(powerup_mode/2 + 0.5)
+        self.powerups = bool(round(powerup_mode/2 + 0.3))
         self.powerups_used: int = 0
         if self.powerups:
             self.undos_left: int = 2
