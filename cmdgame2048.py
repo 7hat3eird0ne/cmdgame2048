@@ -3,6 +3,7 @@ from pynput import keyboard
 import os
 import typing
 import time
+import sys
 
 class Game2048:
     """Class describing a game of 2048
@@ -51,7 +52,24 @@ class Game2048:
         if self.powerups:
             result += f"\nUndos left: {self.undos_left}, swaps left: {self.swaps_left}, deletes left: {self.deletes_left}"
         if self.game_state < 0:
-            result += "\nGAME OVER"
+            result += "\nGAME OVER,"
+            playtime: int = int(self.lose_time - self.start_time)
+            playtime_hours: int = playtime // 3600
+            playtime_minutes: int = (playtime%3600) // 60
+            playtime_seconds: int = playtime % 60
+            playtime_string: str = ""
+            add_padding_zero = lambda number, next_one_padded: "0" + str(number) if len(str(number)) == 1 and next_one_padded else str(number)
+            next_one_padded: bool = False
+            if playtime_hours != 0:
+                playtime_string += str(playtime_hours) + " hours "
+                next_one_padded = True
+            if playtime_minutes != 0 or next_one_padded:
+                playtime_string += add_padding_zero(playtime_minutes, next_one_padded) + " minutes "
+                next_one_padded = True
+            if playtime_seconds != 0 or next_one_padded:
+                playtime_string += add_padding_zero(playtime_seconds, next_one_padded) + " seconds "
+
+            result += f" PLAYTIME: {playtime_string}"
 
         return result
 
@@ -183,6 +201,7 @@ class Game2048:
                     break
             if not move_found:
                 self.game_state *= -1
+                self.lose_time = time.time()
         return self.game_state
 
     def public_move(self, direction: int)-> bool:
@@ -208,7 +227,6 @@ class Game2048:
         self.grid = new_game_position[0]
         self.score = new_game_position[1]
         self.game_state = new_game_position[2]
-        self.moves += 1
         self.undos_left = max(self.undos_left - 1, -1)
         self.powerups_used += 1
         self.last_move = new_game_position
@@ -222,6 +240,7 @@ class Game2048:
             custom_grid = a 2D 4x4 list of integers, corresponding to the board the game will start with
 
             powerup_mode = 0 (default) disables any powerups, 1 enables them and 2 starts the game with practice mode"""
+        self.start_time: float = time.time()
         self.grid: typing.List[typing.List[int]]
         self.custom_grid: bool
         self.original_grid: typing.List[typing.List[int]]
@@ -275,11 +294,32 @@ class Game2048:
             self.moves_limit: int = 128
         self.moves_list: typing.List[typing.Tuple[typing.List[typing.List[int]], int, typing.Literal[-2, -1, 1, 2]]] = [(self.grid.copy(), self.score, self.game_state)]
         self.last_move: typing.Tuple[typing.List[typing.List[int]], int, typing.Literal[-2, -1, 1, 2]] = (self.grid.copy(), self.score, self.game_state)
+        self.lose_time: float = -1.0
 
     def __init__(self, *, custom_grid: typing.List[typing.List[int]] | None = None, powerup_mode: typing.Literal[0, 1, 2] | None = None):
         """Create a new game of 2048 object, its parameters are same self.restart() method"""
         self.restart(custom_grid = custom_grid, powerup_mode = powerup_mode)
 
+
+def refresh(game_object: Game2048):
+    """Clear the command line and reprint a board of 2048"""
+    (lambda : os.system("cls") if os.name == "nt" else os.system("clear"))()
+    print(str(game_object))
+
+def restart(game_object: Game2048):
+    """Restart a game of 2048 and refresh the screen"""
+    game_object.restart()
+    refresh(game_object)
+
+def move(game_object: Game2048, direction: int):
+    """Do a move in a game of 2048 and refresh the screen
+    
+    Parameters:
+
+        direction = an integer, 0 means left, going up by 1 rotates the direction by 90 degrees clockwise
+    """
+    game_object.public_move(direction)
+    refresh(game_object)
 
 def undo(game_object: Game2048):
     """Undo a move in a game of 2048 and refresh the screen"""
@@ -293,35 +333,19 @@ def undo(game_object: Game2048):
         print("There is no move you can undo")
 
 
-def refresh(game_object: Game2048):
-    """Clear the command line and reprint a board of 2048"""
-    (lambda : os.system("cls") if os.name == "nt" else os.system("clear"))()
-    print(str(game_object))
-
-
-def restart(game_object: Game2048):
-    """Restart a game of 2048 and refresh the screen"""
-    game_object.restart()
-    refresh(game_object)
-
-
-def move(game_object: Game2048, direction: int):
-    """Do a move in a game of 2048 and refresh the screen
-    
-    Parameters:
-
-        direction = an integer, 0 means left, going up by 1 rotates the direction by 90 degrees clockwise
-    """
-    game_object.public_move(direction)
-    refresh(game_object)
-
-
 def set_list_false(changed_list: typing.List[bool]):
     changed_list.append(False)
 
-def main():
+def main(args: typing.List[str] = [""]):
     """Start the game of 2048 with keybinds on"""
-    start_input: str = input("By pressing enter, you agree that the terminal will be cleared and that the game of 2048 will start. Controls are WASD or arrow keys, Q to quit and R to restart. Write p to enable power ups (controlled by pressing SHIFT + U, S and T respectively) and add + at the end of the string to start in practice mode (unlimited undo's). Practice mode is impossible to enable without powerups. Write any invalid string and enter to avoid starting the game: ")
+    if len(args) > 1:
+        start_input: str = args[1]
+    else:
+        print("By pressing enter, you agree that the terminal will be cleared and that the game of 2048 will start.")
+        print("Controls are WASD or arrow keys, Q to quit and R to restart.")
+        print("Write p to enable power ups (controlled by pressing SHIFT + U, S and T respectively) and add + at the end of the string to start in practice mode (unlimited undo's).")
+        print("Practice mode is impossible to enable without powerups. Write any invalid string and enter to avoid starting the game: ", end = "")
+        start_input: str = input()
     if start_input == "":
         mode: int = 0
     elif start_input == "p":
@@ -354,4 +378,5 @@ def main():
             time.sleep(1)
         quit()
 
-main()
+if __name__ == "__main__":
+    main(sys.argv)
