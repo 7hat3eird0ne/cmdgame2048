@@ -316,6 +316,9 @@ def move(game_object: Game2048, direction: int):
     refresh(game_object)
 
 
+def set_list_false(changed_list: typing.List[bool]):
+    changed_list.append(False)
+
 def main():
     """Start the game of 2048 with keybinds on"""
     start_input: str = input("By pressing enter, you agree that the terminal will be cleared and that the game of 2048 will start. Controls are WASD or arrow keys, Q to quit and R to restart. Write p to enable power ups (controlled by pressing SHIFT + U, S and T respectively) and add + at the end of the string to start in practice mode (unlimited undo's). Practice mode is impossible to enable without powerups. Write any invalid string and enter to avoid starting the game: ")
@@ -328,6 +331,7 @@ def main():
     else:
         mode: int = -1
     if mode >= 0:
+        condition = [True]
         game = Game2048(powerup_mode = mode)
         restart(game)
         keybinds: typing.Dict[str, typing.Callable] = {
@@ -340,13 +344,14 @@ def main():
             "<left>": lambda: move(game, 0),
             "<right>": lambda: move(game, 2),
             "r": lambda: restart(game),
-            "q": quit
+            "q": lambda: set_list_false(condition)
         }
         if game.powerups:
             keybinds["<shift>+u"] = lambda: undo(game)
         listener = keyboard.GlobalHotKeys(keybinds)
         listener.start()
-        while True:
-            time.sleep(10)
+        while condition[-1]:
+            time.sleep(1)
+        quit()
 
 main()
