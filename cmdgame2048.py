@@ -2,6 +2,7 @@ import random
 from pynput import keyboard
 import os
 import typing
+import time
 
 class Game2048:
     """Class describing a game of 2048
@@ -316,7 +317,7 @@ def move(game_object: Game2048, direction: int):
 
 def main():
     """Start the game of 2048 with keybinds on"""
-    start_input: str = input("By pressing enter, you agree that the terminal will be cleared and that the game of 2048 will start. Controls are WASD or arrow keys, ENTER to quit and R to restart. Write p to enable power ups (controlled by pressing SHIFT + U, S and T respectively) and add + at the end of the string to start in practice mode (unlimited undo's). Practice mode is impossible to enable without powerups. Write any invalid string and enter to avoid starting the game: ")
+    start_input: str = input("By pressing enter, you agree that the terminal will be cleared and that the game of 2048 will start. Controls are WASD or arrow keys, Q to quit and R to restart. Write p to enable power ups (controlled by pressing SHIFT + U, S and T respectively) and add + at the end of the string to start in practice mode (unlimited undo's). Practice mode is impossible to enable without powerups. Write any invalid string and enter to avoid starting the game: ")
     if start_input == "":
         mode: int = 0
     elif start_input == "p":
@@ -337,13 +338,14 @@ def main():
             "<down>": lambda: move(game, 3),
             "<left>": lambda: move(game, 0),
             "<right>": lambda: move(game, 2),
-            "r": lambda: restart(game)
+            "r": lambda: restart(game),
+            "q": quit
         }
         if game.powerups:
             keybinds["<shift>+u"] = lambda: undo(game)
         listener = keyboard.GlobalHotKeys(keybinds)
         listener.start()
-        print("Pressing enter will end the game, press any key to remove this text", end = "")
-        input("")
+        while True:
+            time.sleep(10)
 
 main()

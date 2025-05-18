@@ -7,7 +7,7 @@ You get score from merging two tiles together. The goal is to eventually make a 
 ### power-ups
 There are three types of power-ups - undo a move, swap two tiles, and delete tiles by number. Only the first is supported right now.
 - Undo a move -  Activated by doing SHIFT+U. Undoes the last move you did, you can't undo two moves in a row. You start with 2 uses and need to make a 128 tile to get more.
-- (not supported) - Activated by doing SHIFT+S. Pushing moving keys moves coordinates on bottom. Pressing SHIFT selects the tile coordinates point to. Once two tiles are selected, the selected tiles are swapped. Press R to quit the swap selection mode. Trying to select an empty tile fails. You start with 1 use and need to make a 256 tile to get more.
-- (not supported) - Activated by doing SHIFT+D. Pushing moving keys moves coordinates on bottom. Pressing SHIFT selects the tile coordinates point to. If the selected tile is not empty, it will remove all tiles with that number. Press R to quit delete selection mode. You start with no uses and need to make a 512 tile to get more.
+- (not supported) - Activated by doing SHIFT+S. Pushing moving keys moves coordinates on bottom. Pressing ENTER selects the tile coordinates point to. Once two tiles are selected, the selected tiles are swapped. Press R to quit the swap selection mode. Trying to select an empty tile fails. You start with 1 use and need to make a 256 tile to get more.
+- (not supported) - Activated by doing SHIFT+D. Pushing moving keys moves coordinates on bottom. Pressing ENTER selects the tile coordinates point to. If the selected tile is not empty, it will remove all tiles with that number. Press R to quit delete selection mode. You start with no uses and need to make a 512 tile to get more.
 
 The power-ups are implemented based of the remake of the 2048 game made by the same creator as of the original.
