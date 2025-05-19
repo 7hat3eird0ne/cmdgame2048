@@ -207,7 +207,7 @@ class Game2048:
         return self.game_state
 
     def public_move(self, direction: int)-> bool:
-        """Make a move in the game of 2048 in any direction
+        """Make a move in any direction
         
         Parameters:
 
@@ -219,7 +219,7 @@ class Game2048:
         return True
 
     def undo(self)-> typing.Literal[-2, -1, 0]:
-        "Undo a move in the game of 2048"
+        "Undo a move"
         if self.undos_left == 0:
             return -1
         elif len(self.moves_list) <= 1:
@@ -233,6 +233,42 @@ class Game2048:
         self.deletes_left = new_game_position[2][1]
         self.powerups_used += 1
         self.last_move = new_game_position
+
+        self._check(0)
+        self._check(-1)
+        return 0
+
+    def swap(self, coord_1: typing.List[int], coord_2: typing.List[int])-> typing.Literal[-2, -1, 0]:
+        """Swap two tiles"""
+        if self.swaps_left == 0:
+            return -1
+        if self.get_tile(coord_1) == 0 or self.get_tile(coord_2) == 0 or self.get_tile(coord_1) == self.get_tile(coord_2):
+            return -2
+
+        coord_1_tile: int = self.get_tile(coord_1)
+        coord_2_tile: int = self.get_tile(coord_2)
+        self.grid[coord_1[1]][coord_1[0]] = coord_2_tile
+        self.grid[coord_2[1]][coord_2[0]] = coord_1_tile
+        self.swaps_left = max(self.swaps_left - 1, -1)
+
+        self._check(0)
+        self._check(-1)
+        return 0
+    
+    def delete(self, coordinates: typing.List[int])-> typing.Literal[-2, -1, 0]:
+        """Delete all tiles with the number of the tile on the coordinates"""
+        if self.deletes_left == 0:
+            return -1
+        if self.get_tile(coordinates) == 0:
+            return -2
+        
+        deleted_number = self.get_tile(coordinates)
+        for row in self.grid:
+            for tile, tile_index in zip(row, range(4)):
+                if tile == deleted_number:
+                    print("found")
+                    row[tile_index] = 0
+        self.deletes_left = max(self.deletes_left - 1, -1)
 
         self._check(0)
         self._check(-1)
@@ -288,7 +324,7 @@ class Game2048:
         if self.powerups:
             self.undos_left: int = 2
             self.swaps_left: int = 1
-            self.deletes_left: int = 0
+            self.deletes_left: int = 1
             self.moves_limit: int = 1
         else:
             self.undos_left: int = 0
@@ -303,24 +339,98 @@ class Game2048:
         self.moves_list: typing.List[typing.Tuple[typing.List[typing.List[int]], int, typing.Tuple[int, int]]] = [(self.grid.copy(), self.score, (self.swaps_left, self.deletes_left))]
         self.last_move: typing.Tuple[typing.List[typing.List[int]], int, typing.Tuple[int, int]] = (self.grid.copy(), self.score, (self.swaps_left, self.deletes_left))
         self.lose_time: float = -1.0
+        self.get_tile = lambda coords: self.grid[coords[1]][coords[0]]
 
     def __init__(self, *, custom_grid: typing.List[typing.List[int]] | None = None, powerup_mode: typing.Literal[0, 1, 2] | None = None):
-        """Create a new game of 2048 object, its parameters are same self.restart() method"""
+        """Create a new Game2048 object, its parameters are same self.restart() method"""
         self.restart(custom_grid = custom_grid, powerup_mode = powerup_mode)
 
 
 def refresh(game_object: Game2048):
-    """Clear the command line and reprint a board of 2048"""
+    """Clear the command line and reprint the board"""
     (lambda : os.system("cls") if os.name == "nt" else os.system("clear"))()
     print(str(game_object))
 
+def set_mode(game_object: Game2048, move_mode: typing.List[int], target_mode: int, coordinates: typing.List[int], coordinates_list: typing.List[typing.List[int]]):
+    move_mode.append(target_mode)
+    for i in range(4):
+        move_coordinates(game_object, coordinates, 0)
+        move_coordinates(game_object, coordinates, 1)
+    refresh(game_object)
+    if move_mode[-1] == 1:
+        move_coordinates(game_object, coordinates, 0)
+        print("Entered swap selection")
+    elif move_mode[-1] == 2:
+        move_coordinates(game_object, coordinates, 0)
+        print("Entered deletion selection")
+    else:
+        print("Exitted tile selection")
+
+    while len(coordinates) != 0:
+        coordinates.pop()
+    coordinates.extend([0,0])
+    while len(coordinates_list) != 0:
+        coordinates_list.pop()
+
+def move_coordinates(game_object: Game2048, coordinates: typing.List[int], direction: int):
+    """Move coordinates by 1 in the direction and refresh the screen"""
+    convert_coordinates_str = lambda coords: f"{coords[1] + 1}{["A", "B", "C", "D"][coords[0]]}"
+    direction %= 4
+    if direction == 0:
+        coordinates[0] -= 1
+    elif direction == 1:
+        coordinates[1] -= 1
+    elif direction == 2:
+        coordinates[0] += 1
+    else:
+        coordinates[1] += 1
+
+    coordinates[0] = min(3, coordinates[0])
+    coordinates[1] = min(3, coordinates[1])
+    coordinates[0] = max(0, coordinates[0])
+    coordinates[1] = max(0, coordinates[1])
+
+    refresh(game_object)
+    print(f"Current coordinates (1A is top left and 1D is top right): {convert_coordinates_str(coordinates)}")
+
+def select_coordinates(game_object: Game2048, coordinates_list: typing.List[typing.List[int]], coordinates: typing.List[int]):
+    """Put coordinates into the coordinates_list and refreshes the screen"""
+    convert_coordinates_str = lambda coords: f"{coords[1] + 1}{["A", "B", "C", "D"][coords[0]]}"
+    coordinates_list.append(coordinates.copy())
+    
+    refresh(game_object)
+    print(f"Selected {convert_coordinates_str(coordinates)}")
+
+def submit_coordinates(game_object: Game2048, func: typing.Callable, coordinates_list: typing.List[typing.List[int]], move_mode: int):
+    """Swap or delete tiles determined by func, coordinates_list and coordinates"""
+    function_name: str
+    function_requirement: str
+    function_name_past: str
+    if func == game_object.swap:
+        function_name = "swap"
+        function_requirement = "256"
+        function_name_past = "swapped"
+    elif func == game_object.delete:
+        function_name = "delete"
+        function_requirement = "512"
+        function_name_past = "deleted"
+    result = func(*coordinates_list)
+    set_mode(game_object, move_mode, 0, [0, 0], coordinates_list)
+    refresh(game_object)
+    if result == 0:
+        print(f"Tiles successfully {function_name_past}")
+    if result == -1:
+        print(f"You don't have any uses left, make {function_requirement} tiles to get more uses")
+    elif result == -2:
+        print(f"Failed to {function_name}")
+
 def restart(game_object: Game2048):
-    """Restart a game of 2048 and refresh the screen"""
+    """Restart the game and refresh the screen"""
     game_object.restart()
     refresh(game_object)
 
 def move(game_object: Game2048, direction: int):
-    """Do a move in a game of 2048 and refresh the screen
+    """Do a move in the game and refresh the screen
     
     Parameters:
 
@@ -330,7 +440,7 @@ def move(game_object: Game2048, direction: int):
     refresh(game_object)
 
 def undo(game_object: Game2048):
-    """Undo a move in a game of 2048 and refresh the screen"""
+    """Undo a move in the game and refresh the screen"""
     result: typing.Literal[-2, -1, 0] = game_object.undo()
     refresh(game_object)
     if result == 0:
@@ -341,17 +451,14 @@ def undo(game_object: Game2048):
         print("There is no move you can undo")
 
 
-def set_list_false(changed_list: typing.List[bool]):
-    changed_list.append(False)
-
 def main(args: typing.List[str] = [""]):
     """Start the game of 2048 with keybinds on"""
     if len(args) > 1:
         start_input: str = args[1]
     else:
         print("By pressing enter, you agree that the terminal will be cleared and that the game of 2048 will start.")
-        print("Controls are WASD or arrow keys, Q to quit and R to restart.")
-        print("Write p to enable power ups (controlled by pressing SHIFT + U, S and T respectively) and add + at the end of the string to start in practice mode (unlimited undo's).")
+        print("Controls are WASD or arrow keys, ESC to quit and ENTER to restart.")
+        print("Write p to enable power ups (controlled by pressing SHIFT + U, I and O respectively) and add + at the end of the string to start in practice mode (unlimited undo's).")
         print("Practice mode is impossible to enable without powerups. Write any invalid string and enter to avoid starting the game: ", end = "")
         start_input: str = input()
     if start_input == "":
@@ -363,27 +470,33 @@ def main(args: typing.List[str] = [""]):
     else:
         mode: int = -1
     if mode >= 0:
+        move_mode: typing.List[int] = [0]
+        coordinates: typing.List[int] = [0, 0]
+        coordinates_list: typing.List[typing.List[int]] = []
         condition: typing.List[bool] = [True]
         game: Game2048 = Game2048(powerup_mode = mode)
         restart(game)
         keybinds: typing.Dict[str, typing.Callable] = {
-            "w": lambda: move(game, 1),
-            "s": lambda: move(game, 3),
-            "a": lambda: move(game, 0),
-            "d": lambda: move(game, 2),
-            "<up>": lambda: move(game, 1),
-            "<down>": lambda: move(game, 3),
-            "<left>": lambda: move(game, 0),
-            "<right>": lambda: move(game, 2),
-            "r": lambda: restart(game),
-            "q": lambda: set_list_false(condition)
+            "w": lambda: move(game, 1) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 1),
+            "s": lambda: move(game, 3) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 3),
+            "a": lambda: move(game, 0) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 0),
+            "d": lambda: move(game, 2) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 2),
+            "<up>": lambda: move(game, 1) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 1),
+            "<down>": lambda: move(game, 3) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 3),
+            "<left>": lambda: move(game, 0) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 0),
+            "<right>": lambda: move(game, 2) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 2),
+            "<enter>": lambda: (select_coordinates(game, coordinates_list, coordinates) if len(coordinates_list) != 2 else submit_coordinates(game, game.swap, coordinates_list, move_mode)) if move_mode[-1] == 1 else ((select_coordinates(game, coordinates_list, coordinates) if len(coordinates_list) !=1 else submit_coordinates(game, game.delete, coordinates_list, move_mode)) if move_mode[-1] == 2 else restart(game)),
+            "<esc>": lambda: condition.append(False) if move_mode[-1] == 0 else set_mode(game, move_mode, 0, coordinates, coordinates_list)
         }
         if game.powerups:
-            keybinds["<shift>+u"] = lambda: undo(game)
+            keybinds["<shift>+u"] = lambda: undo(game) if move_mode[-1] == 0 else None
+            keybinds["<shift>+i"] = lambda: set_mode(game, move_mode, 1, coordinates, coordinates_list) if move_mode[-1] == 0 and game.swaps_left != 0 else (print("You don't have any uses left, make 256 tiles to get more uses") if game.swaps_left == 0 else None)
+            keybinds["<shift>+o"] = lambda: set_mode(game, move_mode, 2, coordinates, coordinates_list) if move_mode[-1] == 0 and game.deletes_left != 0 else (print("You don't have any uses left, make 512 tiles to get more uses") if game.deletes_left == 0 else None)
         listener: keyboard.GlobalHotKeys = keyboard.GlobalHotKeys(keybinds)
         listener.start()
         while condition[-1]:
             time.sleep(1)
+            move_mode = [move_mode[-1]]
         quit()
 
 if __name__ == "__main__":
