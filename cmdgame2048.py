@@ -250,6 +250,7 @@ class Game2048:
         self.grid[coord_1[1]][coord_1[0]] = coord_2_tile
         self.grid[coord_2[1]][coord_2[0]] = coord_1_tile
         self.swaps_left = max(self.swaps_left - 1, -1)
+        self.powerups_used += 1
 
         self._check(0)
         self._check(-1)
@@ -269,6 +270,7 @@ class Game2048:
                     print("found")
                     row[tile_index] = 0
         self.deletes_left = max(self.deletes_left - 1, -1)
+        self.powerups_used += 1
 
         self._check(0)
         self._check(-1)
@@ -348,7 +350,7 @@ class Game2048:
 
 def refresh(game_object: Game2048):
     """Clear the command line and reprint the board"""
-    (lambda : os.system("cls") if os.name == "nt" else os.system("clear"))()
+    #(lambda : os.system("cls") if os.name == "nt" else os.system("clear"))()
     print(str(game_object))
 
 def set_mode(game_object: Game2048, move_mode: typing.List[int], target_mode: int, coordinates: typing.List[int], coordinates_list: typing.List[typing.List[int]]):
