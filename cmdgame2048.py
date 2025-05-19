@@ -178,7 +178,7 @@ class Game2048:
             self.moves += 1
             spawn_level: typing.Literal[-1, 1, 2] = self._spawn()
             self.moves_list.append(self.last_move)
-            self.last_move = (self.grid.copy(), self.score, self.game_state)
+            self.last_move = (self.grid.copy(), self.score, (self.swaps_left, self.deletes_left))
             if len(self.moves_list) > self.moves_limit + 1:
                 self.moves_list.pop(0)
             return spawn_level
@@ -202,6 +202,8 @@ class Game2048:
             if not move_found:
                 self.game_state *= -1
                 self.lose_time = time.time()
+            else:
+                self.game_state = abs(self.game_state)
         return self.game_state
 
     def public_move(self, direction: int)-> bool:
@@ -223,13 +225,17 @@ class Game2048:
         elif len(self.moves_list) <= 1:
             return -2
         
-        new_game_position: typing.Tuple[typing.List[typing.List[int]], int, typing.Literal[-2, -1, 1, 2]] = self.moves_list.pop()
+        new_game_position: typing.Tuple[typing.List[typing.List[int]], int] = self.moves_list.pop()
         self.grid = new_game_position[0]
         self.score = new_game_position[1]
-        self.game_state = new_game_position[2]
         self.undos_left = max(self.undos_left - 1, -1)
+        self.swaps_left = new_game_position[2][0]
+        self.deletes_left = new_game_position[2][1]
         self.powerups_used += 1
         self.last_move = new_game_position
+
+        self._check(0)
+        self._check(-1)
         return 0
 
     def restart(self, *, custom_grid: typing.List[typing.List[int]] | None = None, powerup_mode: typing.Literal[0, 1, 2] | None = None):
@@ -292,8 +298,10 @@ class Game2048:
         if self.practice:
             self.undos_left: int = -1
             self.moves_limit: int = 128
-        self.moves_list: typing.List[typing.Tuple[typing.List[typing.List[int]], int, typing.Literal[-2, -1, 1, 2]]] = [(self.grid.copy(), self.score, self.game_state)]
-        self.last_move: typing.Tuple[typing.List[typing.List[int]], int, typing.Literal[-2, -1, 1, 2]] = (self.grid.copy(), self.score, self.game_state)
+        self._check(0)
+        self._check(-1)
+        self.moves_list: typing.List[typing.Tuple[typing.List[typing.List[int]], int, typing.Tuple[int, int]]] = [(self.grid.copy(), self.score, (self.swaps_left, self.deletes_left))]
+        self.last_move: typing.Tuple[typing.List[typing.List[int]], int, typing.Tuple[int, int]] = (self.grid.copy(), self.score, (self.swaps_left, self.deletes_left))
         self.lose_time: float = -1.0
 
     def __init__(self, *, custom_grid: typing.List[typing.List[int]] | None = None, powerup_mode: typing.Literal[0, 1, 2] | None = None):
@@ -355,8 +363,8 @@ def main(args: typing.List[str] = [""]):
     else:
         mode: int = -1
     if mode >= 0:
-        condition = [True]
-        game = Game2048(powerup_mode = mode)
+        condition: typing.List[bool] = [True]
+        game: Game2048 = Game2048(powerup_mode = mode)
         restart(game)
         keybinds: typing.Dict[str, typing.Callable] = {
             "w": lambda: move(game, 1),
@@ -372,7 +380,7 @@ def main(args: typing.List[str] = [""]):
         }
         if game.powerups:
             keybinds["<shift>+u"] = lambda: undo(game)
-        listener = keyboard.GlobalHotKeys(keybinds)
+        listener: keyboard.GlobalHotKeys = keyboard.GlobalHotKeys(keybinds)
         listener.start()
         while condition[-1]:
             time.sleep(1)
