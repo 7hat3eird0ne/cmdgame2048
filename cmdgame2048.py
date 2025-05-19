@@ -324,7 +324,7 @@ class Game2048:
         if self.powerups:
             self.undos_left: int = 2
             self.swaps_left: int = 1
-            self.deletes_left: int = 1
+            self.deletes_left: int = 0
             self.moves_limit: int = 1
         else:
             self.undos_left: int = 0
