@@ -5,7 +5,7 @@ To play, press either WASD or arrow keys. This moves all the tiles in a certain 
 
 You get score from merging two tiles together. The goal is to eventually make a 2048 tile and then reach the highest score you can. You lose moment you can't merge or move any tiles in any direction.
 
-You can restart the game by pressing ENTER and quit by pressing ESC
+You can restart the game by pressing ENTER and quit by pressing ESC. To pause the game, press SPACE and then ESC right after, to unpause do the same. (Pause whenever unfocusing the window since it still reacts to key presses even if unfocused)
 ### power-ups
 There are three types of power-ups - undo a move, swap two tiles, and delete tiles by number. Only the first is supported right now.
 - Undo a move -  Activated by doing SHIFT+U. Undoes the last move you did, you can't undo two moves in a row. You start with 2 uses and need to make a 128 tile to get more. Power up counts as a move, therefore it is possible to undo a power up.

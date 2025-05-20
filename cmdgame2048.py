@@ -453,13 +453,31 @@ def undo(game_object: Game2048):
     elif result == -2:
         print("There is no move you can undo")
 
+def start_pause(confirm_await_list):
+    confirm_await_list[0] = True
+    print("Waiting for ESC press to pause")
+
+def confirm_pause(game_object: Game2048, paused_list: typing.List[bool], confirm_await_list: typing.List[bool], move_mode: typing.List[int], coordinates: typing.List[int]):
+    paused_list[0] = not paused_list[0]
+    confirm_await_list[0] = False
+    refresh(game_object)
+    if paused_list[0]:
+        print("\nCURRENTLY PAUSED")
+    elif move_mode[0] != 0:
+        if coordinates[1] != 0:
+            move_coordinates(game_object, coordinates, 1)
+            move_coordinates(game_object, coordinates, 3)
+        else:
+            move_coordinates(game_object, coordinates, 3)
+            move_coordinates(game_object, coordinates, 1)
 
 def main(args: typing.List[str] = [""]):
-    """Start the game of 2048 with keybinds on"""
+    """Start the game of 2048 with keybinds, reacts to keys being pressed even when out of focus"""
     if len(args) > 1:
         start_input: str = args[1]
     else:
         print("By pressing enter, you agree that the terminal will be cleared and that the game of 2048 will start.")
+        print("The game will react to key presses even when it is not in focus. Press SPACE and ESC right after to pause and unpause when unfocusing the window temporarily.")
         print("Controls are WASD or arrow keys, ESC to quit and ENTER to restart.")
         print("Write p to enable power ups (controlled by pressing SHIFT + U, I and O respectively) and add + at the end of the string to start in practice mode (unlimited undo's).")
         print("Practice mode is impossible to enable without powerups. Write any invalid string and enter to avoid starting the game: ", end = "")
@@ -474,31 +492,39 @@ def main(args: typing.List[str] = [""]):
         mode: int = -1
     if mode >= 0:
         move_mode: typing.List[int] = [0]
+        paused_list: typing.List[bool] = [False]
+        confirm_await_list: typing.List[bool] = [False]
         coordinates: typing.List[int] = [0, 0]
         coordinates_list: typing.List[typing.List[int]] = []
         condition: typing.List[bool] = [True]
         game: Game2048 = Game2048(powerup_mode = mode)
         restart(game)
         keybinds: typing.Dict[str, typing.Callable] = {
-            "w": lambda: move(game, 1) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 1),
-            "s": lambda: move(game, 3) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 3),
-            "a": lambda: move(game, 0) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 0),
-            "d": lambda: move(game, 2) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 2),
-            "<up>": lambda: move(game, 1) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 1),
-            "<down>": lambda: move(game, 3) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 3),
-            "<left>": lambda: move(game, 0) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 0),
-            "<right>": lambda: move(game, 2) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 2),
-            "<enter>": lambda: (select_coordinates(game, coordinates_list, coordinates) if len(coordinates_list) != 2 else submit_coordinates(game, game.swap, coordinates_list, move_mode)) if move_mode[-1] == 1 else ((select_coordinates(game, coordinates_list, coordinates) if len(coordinates_list) !=1 else submit_coordinates(game, game.delete, coordinates_list, move_mode)) if move_mode[-1] == 2 else restart(game)),
-            "<esc>": lambda: condition.append(False) if move_mode[-1] == 0 else set_mode(game, move_mode, 0, coordinates, coordinates_list)
+            "w": lambda: (move(game, 1) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 1)) if not paused_list[0] else None,
+            "s": lambda: (move(game, 3) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 3)) if not paused_list[0] else None,
+            "a": lambda: (move(game, 0) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 0)) if not paused_list[0] else None,
+            "d": lambda: (move(game, 2) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 2)) if not paused_list[0] else None,
+            "<up>": lambda: (move(game, 1) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 1)) if not paused_list[0] else None,
+            "<down>": lambda: (move(game, 3) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 3)) if not paused_list[0] else None,
+            "<left>": lambda: (move(game, 0) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 0)) if not paused_list[0] else None,
+            "<right>": lambda: (move(game, 2) if move_mode[-1] == 0 else move_coordinates(game, coordinates, 2)) if not paused_list[0] else None,
+            "<enter>": lambda: ((select_coordinates(game, coordinates_list, coordinates) if len(coordinates_list) != 2 else submit_coordinates(game, game.swap, coordinates_list, move_mode)) if move_mode[-1] == 1 else ((select_coordinates(game, coordinates_list, coordinates) if len(coordinates_list) !=1 else submit_coordinates(game, game.delete, coordinates_list, move_mode)) if move_mode[-1] == 2 else restart(game))) if not paused_list[0] else None,
+            "<esc>": lambda: confirm_pause(game, paused_list, confirm_await_list, move_mode, coordinates) if confirm_await_list[0] else ((condition.append(False) if move_mode[-1] == 0 else set_mode(game, move_mode, 0, coordinates, coordinates_list)) if not paused_list[0] else None),
+            "<space>": lambda: start_pause(confirm_await_list) if not confirm_await_list[0] else None
         }
         if game.powerups:
-            keybinds["<shift>+u"] = lambda: undo(game) if move_mode[-1] == 0 else None
-            keybinds["<shift>+i"] = lambda: set_mode(game, move_mode, 1, coordinates, coordinates_list) if move_mode[-1] == 0 and game.swaps_left != 0 else (print("You don't have any uses left, make 256 tiles to get more uses") if game.swaps_left == 0 else None)
-            keybinds["<shift>+o"] = lambda: set_mode(game, move_mode, 2, coordinates, coordinates_list) if move_mode[-1] == 0 and game.deletes_left != 0 else (print("You don't have any uses left, make 512 tiles to get more uses") if game.deletes_left == 0 else None)
+            keybinds["<shift>+u"] = lambda: (undo(game) if move_mode[-1] == 0 else None) if not paused_list[0] else None
+            keybinds["<shift>+i"] = lambda: (set_mode(game, move_mode, 1, coordinates, coordinates_list) if move_mode[-1] == 0 and game.swaps_left != 0 else (print("You don't have any uses left, make 256 tiles to get more uses") if game.swaps_left == 0 else None)) if not paused_list[0] else None
+            keybinds["<shift>+o"] = lambda: (set_mode(game, move_mode, 2, coordinates, coordinates_list) if move_mode[-1] == 0 and game.deletes_left != 0 else (print("You don't have any uses left, make 512 tiles to get more uses") if game.deletes_left == 0 else None)) if not paused_list[0] else None
         listener: keyboard.GlobalHotKeys = keyboard.GlobalHotKeys(keybinds)
         listener.start()
         while condition[-1]:
             time.sleep(1)
+            if confirm_await_list[0]:
+                time.sleep(1)
+                if confirm_await_list[0]:
+                    confirm_await_list[0] = False
+                    print("ESC key was not pressed")
             move_mode = [move_mode[-1]]
         quit()
 
