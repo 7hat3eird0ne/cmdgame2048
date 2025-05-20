@@ -1,6 +1,7 @@
 import random
 from pynput import keyboard
 import os
+import copy
 import typing
 import time
 import sys
@@ -73,6 +74,11 @@ class Game2048:
 
         return result
 
+    def _snapshot(self):
+        self.moves_list.append((copy.deepcopy(self.grid), self.score, (self.swaps_left, self.deletes_left)))
+        if len(self.moves_list) > self.moves_limit:
+            self.moves_list.pop(0)
+
     def _spawn(self)-> typing.Literal[-1, 1, 2]:
         """Spawn a 2 or 4 tile at random empty position of the grid"""
         flattened_grid: typing.List[int] = []
@@ -100,7 +106,7 @@ class Game2048:
         
         self.grid = [flattened_grid[i:i+4] for i in range(0, 16, 4)]
         return chosen_level
-    
+
     def _move(self, direction: int, check_only: bool = False)-> typing.Literal[-1, 0, 1, 2]:
         """Do a raw move in any direction
         
@@ -147,12 +153,13 @@ class Game2048:
                     while tile + 1 >= len(new_tiles):
                         new_tiles.append(str(2*int(new_tiles[-1])))
                     new_score += int(new_tiles[tile + 1])
-                    if tile == 6 and not self.practice:
-                        self.undos_left = min(self.undos_left + 1, 2)
-                    elif tile == 7:
-                        self.swaps_left = min(self.swaps_left + 1, 2)
-                    elif tile == 8:
-                        self.deletes_left = min(self.deletes_left + 1, 2)
+                    if self.powerups:
+                        if tile == 6 and not self.practice:
+                            self.undos_left = min(self.undos_left + 1, 2)
+                        elif tile == 7:
+                            self.swaps_left = min(self.swaps_left + 1, 2)
+                        elif tile == 8:
+                            self.deletes_left = min(self.deletes_left + 1, 2)
                     next_tile_used = True
                     empty_available = True
                     definitely_changed = True
@@ -172,38 +179,34 @@ class Game2048:
         else:
             for i in range(direction):
                 new_rotated_grid = list(map(list, zip(*new_rotated_grid[::-1])))
+            self._snapshot()
             self.grid = new_rotated_grid
             self.tiles = new_tiles
             self.score = new_score
             self.moves += 1
             spawn_level: typing.Literal[-1, 1, 2] = self._spawn()
-            self.moves_list.append(self.last_move)
-            self.last_move = (self.grid.copy(), self.score, (self.swaps_left, self.deletes_left))
-            if len(self.moves_list) > self.moves_limit + 1:
-                self.moves_list.pop(0)
             return spawn_level
 
-    def _check(self, check_argument: typing.Literal[-1, 0, 1, 2])-> typing.Literal[-3, -2, -1, 1, 2, 3]:
+    def _check(self)-> typing.Literal[-3, -2, -1, 1, 2, 3]:
         """Check the game_state and update accordingly in case"""
-        if check_argument != -1:
-            max_number: int = 0
-            for row in self.grid:
-                for tile in row:
-                    if tile > max_number:
-                        max_number = tile
-            if max_number == 11:
-                self.game_state = 1
+        max_number: int = 0
+        for row in self.grid:
+            for tile in row:
+                if tile > max_number:
+                    max_number = tile
+        if max_number == 11 and abs(self.game_state) == 1:
+            self.game_state *= 2
+
+        move_found: bool = False
+        for i in range(4):
+            if self._move(i, True) != -1:
+                move_found = True
+                break
+        if not move_found:
+            self.game_state *= -1
+            self.lose_time = time.time()
         else:
-            move_found: bool = False
-            for i in range(4):
-                if self._move(i, True) != -1:
-                    move_found = True
-                    break
-            if not move_found:
-                self.game_state *= -1
-                self.lose_time = time.time()
-            else:
-                self.game_state = abs(self.game_state)
+            self.game_state = abs(self.game_state)
         return self.game_state
 
     def public_move(self, direction: int)-> bool:
@@ -213,16 +216,17 @@ class Game2048:
 
             direction = an integer, 0 means left, going up by 1 rotates the direction by 90 degrees clockwise
         """
-        if self.game_state == -1:
+        if self.game_state < 0:
             return False
-        self._check(self._move(direction))
+        self._move(direction)
+        self._check()
         return True
 
     def undo(self)-> typing.Literal[-2, -1, 0]:
         "Undo a move"
         if self.undos_left == 0:
             return -1
-        elif len(self.moves_list) <= 1:
+        elif len(self.moves_list) == 0:
             return -2
         
         new_game_position: typing.Tuple[typing.List[typing.List[int]], int] = self.moves_list.pop()
@@ -232,10 +236,8 @@ class Game2048:
         self.swaps_left = new_game_position[2][0]
         self.deletes_left = new_game_position[2][1]
         self.powerups_used += 1
-        self.last_move = new_game_position
 
-        self._check(0)
-        self._check(-1)
+        self._check()
         return 0
 
     def swap(self, coord_1: typing.List[int], coord_2: typing.List[int])-> typing.Literal[-2, -1, 0]:
@@ -245,6 +247,7 @@ class Game2048:
         if self.get_tile(coord_1) == 0 or self.get_tile(coord_2) == 0 or self.get_tile(coord_1) == self.get_tile(coord_2):
             return -2
 
+        self._snapshot()
         coord_1_tile: int = self.get_tile(coord_1)
         coord_2_tile: int = self.get_tile(coord_2)
         self.grid[coord_1[1]][coord_1[0]] = coord_2_tile
@@ -252,8 +255,7 @@ class Game2048:
         self.swaps_left = max(self.swaps_left - 1, -1)
         self.powerups_used += 1
 
-        self._check(0)
-        self._check(-1)
+        self._check()
         return 0
     
     def delete(self, coordinates: typing.List[int])-> typing.Literal[-2, -1, 0]:
@@ -263,17 +265,16 @@ class Game2048:
         if self.get_tile(coordinates) == 0:
             return -2
         
+        self._snapshot()
         deleted_number = self.get_tile(coordinates)
         for row in self.grid:
             for tile, tile_index in zip(row, range(4)):
                 if tile == deleted_number:
-                    print("found")
                     row[tile_index] = 0
         self.deletes_left = max(self.deletes_left - 1, -1)
         self.powerups_used += 1
 
-        self._check(0)
-        self._check(-1)
+        self._check()
         return 0
 
     def restart(self, *, custom_grid: typing.List[typing.List[int]] | None = None, powerup_mode: typing.Literal[0, 1, 2] | None = None):
@@ -336,10 +337,8 @@ class Game2048:
         if self.practice:
             self.undos_left: int = -1
             self.moves_limit: int = 128
-        self._check(0)
-        self._check(-1)
-        self.moves_list: typing.List[typing.Tuple[typing.List[typing.List[int]], int, typing.Tuple[int, int]]] = [(self.grid.copy(), self.score, (self.swaps_left, self.deletes_left))]
-        self.last_move: typing.Tuple[typing.List[typing.List[int]], int, typing.Tuple[int, int]] = (self.grid.copy(), self.score, (self.swaps_left, self.deletes_left))
+        self._check()
+        self.moves_list: typing.List[typing.Tuple[typing.List[typing.List[int]], int, typing.Tuple[int, int]]] = []
         self.lose_time: float = -1.0
         self.get_tile = lambda coords: self.grid[coords[1]][coords[0]]
 
@@ -350,7 +349,7 @@ class Game2048:
 
 def refresh(game_object: Game2048):
     """Clear the command line and reprint the board"""
-    #(lambda : os.system("cls") if os.name == "nt" else os.system("clear"))()
+    (lambda : os.system("cls") if os.name == "nt" else os.system("clear"))()
     print(str(game_object))
 
 def set_mode(game_object: Game2048, move_mode: typing.List[int], target_mode: int, coordinates: typing.List[int], coordinates_list: typing.List[typing.List[int]]):
