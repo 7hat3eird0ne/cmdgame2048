@@ -254,6 +254,7 @@ class Game2048:
         self.grid[coord_2[1]][coord_2[0]] = coord_1_tile
         self.swaps_left = max(self.swaps_left - 1, -1)
         self.powerups_used += 1
+        self.moves += 1
 
         self._check()
         return 0
@@ -273,6 +274,7 @@ class Game2048:
                     row[tile_index] = 0
         self.deletes_left = max(self.deletes_left - 1, -1)
         self.powerups_used += 1
+        self.moves += 1
 
         self._check()
         return 0
