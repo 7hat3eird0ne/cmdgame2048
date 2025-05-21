@@ -92,7 +92,7 @@ class Game2048:
         else:
             chosen_level = 1
         current_spot: int = 0
-        for tile_index, tile in range(len(flattened_grid)):
+        for tile_index, tile in enumerate(flattened_grid):
             if tile == 0 and current_spot == new_spot:
                 flattened_grid[tile_index] = chosen_level
                 break
@@ -122,7 +122,7 @@ class Game2048:
         new_tiles: typing.List[str] = self.tiles.copy()
         new_score = self.score
         new_rotated_grid: typing.List[typing.List[int]] = []
-        for row_index, row in enumerate(rotated_grid.copy()):
+        for row_index, row in enumerate(copy.deepcopy(rotated_grid)):
             if row.count(0) != 0:
                 empty_available = True
             non_empty_seen: bool = False
