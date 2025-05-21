@@ -29,20 +29,16 @@ class Game2048:
         if self.practice:
             secondary_add_info += " (PRACTICE MODE)"
         result: str = f"Score: {self.score}, Moves: {self.moves}{secondary_add_info}{additional_info}"
-        max_character_lengths: list[int] = []
-        for i in zip(*self.grid):
-            max_character_lengths.append(len(self.tiles[max(i)]))
-        for i in self.grid:
+        max_character_lengths: typing.List[int] = [len(self.tiles[max(column)]) for column in zip(*self.grid)]
+        for row in self.grid:
             result += "\n"
             first: bool = True
-            for k in range(len(i)):
-                j: int = i[k]
-                column_max_length: int = max_character_lengths[k]
-                tile_string: str = self.tiles[j]
+            for tile, tile_index, column_max_length in zip(row, range(len(row)), max_character_lengths):
+                tile_string: str = self.tiles[tile]
                 padded_length: int = column_max_length - len(tile_string)
                 front_padding: int = padded_length//2 + 1
                 back_padding: int = front_padding + padded_length%2
-                if k == len(i) - 1:
+                if tile_index == len(row) - 1:
                     back_padding = 0
                 tile_string: str = " "*front_padding + tile_string + " "*back_padding
                 if first:
@@ -82,29 +78,28 @@ class Game2048:
     def _spawn(self)-> typing.Literal[-1, 1, 2]:
         """Spawn a 2 or 4 tile at random empty position of the grid"""
         flattened_grid: typing.List[int] = []
-        for i in self.grid:
-            flattened_grid.extend(i)
+        for row in self.grid:
+            flattened_grid.extend(row)
         
         empty_spots: int = flattened_grid.count(0)
         if empty_spots == 0:
             return -1
         
         new_spot: int = (empty_spots * random.random()).__floor__()
-        i: int = 0
         chosen_level: int
         if random.random() > 0.9:
             chosen_level = 2
         else:
             chosen_level = 1
-        for k in range(len(flattened_grid)):
-            j = flattened_grid[k]
-            if j == 0 and i == new_spot:
-                flattened_grid[k] = chosen_level
+        current_spot: int = 0
+        for tile_index, tile in range(len(flattened_grid)):
+            if tile == 0 and current_spot == new_spot:
+                flattened_grid[tile_index] = chosen_level
                 break
-            elif j == 0:
-                i += 1
+            elif tile == 0:
+                current_spot += 1
         
-        self.grid = [flattened_grid[i:i+4] for i in range(0, 16, 4)]
+        self.grid = [flattened_grid[row_start_index:row_start_index + 4] for row_start_index in range(0, len(flattened_grid), len(self.grid))]
         return chosen_level
 
     def _move(self, direction: int, check_only: bool = False)-> typing.Literal[-1, 0, 1, 2]:
@@ -127,23 +122,21 @@ class Game2048:
         new_tiles: typing.List[str] = self.tiles.copy()
         new_score = self.score
         new_rotated_grid: typing.List[typing.List[int]] = []
-        for row_index in range(4):
-            row = rotated_grid[row_index].copy()
+        for row_index, row in enumerate(rotated_grid.copy()):
             if row.count(0) != 0:
                 empty_available = True
             non_empty_seen: bool = False
-            for i in row[::-1]:
-                if i != 0:
+            for tile in row[::-1]:
+                if tile != 0:
                     non_empty_seen = True
                 elif non_empty_seen:
                     definitely_changed = True
-            for i in range(row.count(0)):
+            for tile in range(row.count(0)):
                 row.remove(0)
 
             new_row: typing.List[int] = []
             next_tile_used: bool = False
-            for tile_index in range(len(row)):
-                tile = row[tile_index]
+            for tile_index, tile in enumerate(row):
                 if tile_index == len(row) - 1:
                     next_tile = 0
                 else:
@@ -168,8 +161,7 @@ class Game2048:
                 else:
                     next_tile_used = False
 
-            for i in range(4 - len(new_row)):
-                new_row.append(0)
+            new_row.extend([0] * (len(self.grid[0]) - len(new_row)))
             new_rotated_grid.append(new_row)
 
         if not empty_available:
@@ -189,24 +181,18 @@ class Game2048:
 
     def _check(self)-> typing.Literal[-3, -2, -1, 1, 2, 3]:
         """Check the game_state and update accordingly in case"""
-        max_number: int = 0
-        for row in self.grid:
-            for tile in row:
-                if tile > max_number:
-                    max_number = tile
+        max_number: int = max([max(row) for row in self.grid])
         if max_number == 11 and abs(self.game_state) == 1:
             self.game_state *= 2
 
-        move_found: bool = False
-        for i in range(4):
-            if self._move(i, True) != -1:
-                move_found = True
+        for direction in range(4):
+            if self._move(direction, True) != -1:
                 break
-        if not move_found:
+        else:
             self.game_state *= -1
             self.lose_time = time.time()
-        else:
-            self.game_state = abs(self.game_state)
+            return self.game_state
+        self.game_state = abs(self.game_state)
         return self.game_state
 
     def public_move(self, direction: int)-> bool:
@@ -268,10 +254,8 @@ class Game2048:
         
         self._snapshot()
         deleted_number = self.get_tile(coordinates)
-        for row in self.grid:
-            for tile, tile_index in zip(row, range(4)):
-                if tile == deleted_number:
-                    row[tile_index] = 0
+        new_grid = [[0 if tile == deleted_number else tile for tile in enumerate(row)] for row in self.grid]
+        self.grid = new_grid
         self.deletes_left = max(self.deletes_left - 1, -1)
         self.powerups_used += 1
         self.moves += 1
@@ -308,11 +292,8 @@ class Game2048:
         self.moves: int = 0
         self._spawn()
         self._spawn()
-        max_number: int = 0
-        for row in self.grid:
-            for tile in row:
-                if tile > max_number:
-                    max_number = tile
+
+        max_number: int = max([max(row) for row in self.grid])
         while max_number >= len(self.tiles):
             self.tiles.append(str(2*int(self.tiles[-1])))
 
@@ -351,12 +332,12 @@ class Game2048:
 
 def refresh(game_object: Game2048):
     """Clear the command line and reprint the board"""
-    (lambda : os.system("cls") if os.name == "nt" else os.system("clear"))()
+    os.system("cls" if os.name == "nt" else "clear")
     print(str(game_object))
 
 def set_mode(game_object: Game2048, move_mode: typing.List[int], target_mode: int, coordinates: typing.List[int], coordinates_list: typing.List[typing.List[int]]):
     move_mode.append(target_mode)
-    for i in range(4):
+    for i in range(max(game_object.grid, game_object.grid[0])):
         move_coordinates(game_object, coordinates, 0)
         move_coordinates(game_object, coordinates, 1)
     refresh(game_object)
