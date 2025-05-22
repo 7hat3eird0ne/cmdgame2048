@@ -500,7 +500,7 @@ def main(args: typing.List[str] = [""]):
         listener: keyboard.GlobalHotKeys = keyboard.GlobalHotKeys(keybinds)
         listener.start()
         while condition[-1]:
-            time.sleep(1)
+            time.sleep(0.1)
             if confirm_await_list[0]:
                 time.sleep(1)
                 if confirm_await_list[0]:
